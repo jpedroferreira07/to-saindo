@@ -1,5 +1,7 @@
 # Desenho do app (texto, sem código)
 
+> **Superado em 2026-11-28 pelo plano v3: [docs/PLANO-APP.md](PLANO-APP.md)** (app com abas Mapa e Feed, reportes com triagem do agente, sem WhatsApp/Telegram). Mantido só como histórico; onde houver conflito, vale o PLANO-APP.
+
 Atualizado em 2026-11-26 para a versão 2 (WhatsApp + Telegram, site de entrada + mapa). A direção visual do site **não** é definida aqui: ela sai do fluxo `/site-premium` no dia (ver `PENDENCIAS.md`).
 
 ## Banco (Supabase, só armazenamento, criado no dia 28/11)

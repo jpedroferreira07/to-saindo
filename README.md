@@ -1,11 +1,12 @@
 # Tô saindo
 
-Agente de IA que avisa, antes de você sair, quando há algo relevante no seu trajeto no Rio de Janeiro: chuva forte, tiroteio registrado, problema de mobilidade ou notícia que afeta o caminho. Fora isso, fica em silêncio. Projeto do Builders Day 2026 (hackathon 1565 × Taicor, 28/11).
+Mapa colaborativo do Rio de Janeiro que mostra, em tempo real, o que está acontecendo em cada bairro (árvore caída, luz queimada, trânsito, assalto, tiroteio, chuva) e deixa qualquer pessoa reportar o que viu. Um agente de IA confere, classifica e junta os reportes antes de publicar. Duas abas: **Mapa** (busca, bairro e navegação de A até B) e **Feed** (alertas em texto, com filtro por tipo e bairro). Projeto do Builders Day 2026 (hackathon 1565 × Taicor, 28/11).
 
-Cada aviso traz a fonte, o horário e o nível de confiança. Os eventos expiram e o projeto não marca regiões como "perigosas".
+Cada ocorrência traz a fonte, o horário e o nível de confiança. As ocorrências expiram e o projeto não marca regiões como "perigosas".
 
 ## Documentação
-- [docs/ARQUITETURA.md](docs/ARQUITETURA.md): banco, agente, verificador de alertas e conteúdo do site.
+- [docs/PLANO-APP.md](docs/PLANO-APP.md): **plano vigente** (telas, agente, dados, contratos das rotas, divisão do time).
+- [docs/ARQUITETURA.md](docs/ARQUITETURA.md): desenho anterior (histórico).
 - [docs/FONTES.md](docs/FONTES.md): fontes de dados, endereços e resultado dos testes.
 - [docs/FOGOCRUZADO.md](docs/FOGOCRUZADO.md): como a API de tiroteios entra no projeto.
 - [docs/design/DIRECAO-VISUAL.md](docs/design/DIRECAO-VISUAL.md): direção visual, cores, fontes, 3D e telas aprovadas.

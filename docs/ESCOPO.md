@@ -1,5 +1,7 @@
 # Escopo decidido (2026-11-26) — vale mais que PLANO.md onde houver conflito
 
+> **Superado em 2026-11-28 pelo plano v3: [docs/PLANO-APP.md](PLANO-APP.md)** (app com abas Mapa e Feed, reportes com triagem do agente, sem WhatsApp/Telegram). Mantido só como histórico; onde houver conflito, vale o PLANO-APP.
+
 > **Histórico.** Superado pela versão 2 em `RESUMO-PARA-O-GRUPO.md` (WhatsApp + Telegram, site como entrada + mapa). Mantido só como registro.
 
 ## Decisões do Bernardo
