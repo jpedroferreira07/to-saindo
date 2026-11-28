@@ -1,0 +1,41 @@
+# Segredos: nunca vão para o Git
+.env
+.env.*
+!.env.example
+
+# Ferramentas de IA e contexto local
+.claude/
+CLAUDE.md
+.impeccable/
+
+# Planejamento interno do time
+PLANO.md
+PENDENCIAS.md
+RESUMO-PARA-O-GRUPO.md
+PRODUCT.md
+
+# Sons brutos (licença e tamanho; os cortados vão em assets/sons/)
+assets/sons/originais/
+assets/sons/ouvir.html
+
+# Dependências e builds
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel e logs
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
