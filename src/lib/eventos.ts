@@ -87,7 +87,7 @@ const MOLDES: readonly Molde[] = [
   { tipo: "acidente", titulo: "Acidente com faixa interditada na Av. Cesário de Melo", bairro: "Campo Grande", lat: -22.9, lng: -43.56, fonte: "G1 Rio", confianca: "confirmado", severidade: 2, origem: "noticia", haMin: 15 },
   { tipo: "chuva", titulo: "Chuva forte prevista para as 6h50", bairro: "Campo Grande", lat: -22.9, lng: -43.56, fonte: "Alerta Rio", confianca: "oficial", severidade: 2, origem: "oficial", haMin: 10 },
   { tipo: "transporte", titulo: "Trens com intervalo maior no ramal Santa Cruz", bairro: "Deodoro", lat: -22.85, lng: -43.38, fonte: "SuperVia", confianca: "oficial", severidade: 1, origem: "oficial", haMin: 55 },
-  { tipo: "transito", titulo: "Evento fecha faixas na Av. Lúcio Costa", bairro: "Barra da Tijuca", lat: -23.0, lng: -43.36, fonte: "G1 Rio", confianca: "confirmado", severidade: 1, origem: "noticia", haMin: 120 },
+  { tipo: "transito", titulo: "Evento fecha faixas na Av. Lúcio Costa", bairro: "Barra da Tijuca", lat: -23.0, lng: -43.36, fonte: "G1 Rio", confianca: "confirmado", severidade: 1, origem: "noticia", haMin: 100 },
   { tipo: "tiroteio", titulo: "Disparos registrados, relato isolado", bairro: "Cidade de Deus", lat: -22.95, lng: -43.36, fonte: "Fogo Cruzado", confianca: "relato", severidade: 2, origem: "noticia", haMin: 70 },
   { tipo: "chuva", titulo: "Chuva fraca", bairro: "Grajaú", lat: -22.92, lng: -43.26, fonte: "Alerta Rio", confianca: "oficial", severidade: 1, origem: "oficial", haMin: 5 },
   { tipo: "arvore_caida", titulo: "Árvore caída bloqueando uma faixa", bairro: "Tijuca", lat: -22.925, lng: -43.235, fonte: "Usuários", confianca: "relato", severidade: 2, origem: "usuario", haMin: 12 },

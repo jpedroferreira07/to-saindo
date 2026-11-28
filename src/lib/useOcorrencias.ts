@@ -30,8 +30,8 @@ export function useOcorrencias(): EstadoOcorrencias {
   const [agora, setAgora] = useState<Date | null>(null);
   const vivo = useRef(true);
 
-  const recarregar = useCallback(async () => {
-    setCarregando(true);
+  // Carga silenciosa: não liga o "carregando" de forma síncrona (usada pelos efeitos).
+  const carregar = useCallback(async () => {
     const r = await listarOcorrencias();
     if (!vivo.current) return;
     // Reportes locais (plano B) sobrevivem à recarga.
@@ -41,9 +41,14 @@ export function useOcorrencias(): EstadoOcorrencias {
     setCarregando(false);
   }, []);
 
+  const recarregar = useCallback(async () => {
+    setCarregando(true);
+    await carregar();
+  }, [carregar]);
+
   useEffect(() => {
     vivo.current = true;
-    void recarregar();
+    void carregar();
     let cancelar: (() => void) | null = null;
     void assinarTempoReal(
       (e) => {
@@ -62,12 +67,12 @@ export function useOcorrencias(): EstadoOcorrencias {
       vivo.current = false;
       cancelar?.();
     };
-  }, [recarregar]);
+  }, [carregar]);
 
   useEffect(() => {
-    const t = setInterval(() => void recarregar(), tempoReal ? RECARGA_COM_TEMPO_REAL_MS : RECARGA_SEM_TEMPO_REAL_MS);
+    const t = setInterval(() => void carregar(), tempoReal ? RECARGA_COM_TEMPO_REAL_MS : RECARGA_SEM_TEMPO_REAL_MS);
     return () => clearInterval(t);
-  }, [tempoReal, recarregar]);
+  }, [tempoReal, carregar]);
 
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), RELOGIO_MS);

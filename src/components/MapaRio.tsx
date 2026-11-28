@@ -1,7 +1,11 @@
 "use client";
 
-import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MapaGL, type Marker } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource, LngLatBoundsLike, Map as MapaGL, Marker, MapMouseEvent, MapGeoJSONFeature } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// O bundler reescreve o caminho do worker; aponta para a cópia estática em public/maplibre (versão 6.20.0).
+maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { RIO_BOUNDS, RIO_CENTRO, type LatLng } from "@/lib/geo";
 import { svgDoIcone } from "@/lib/icones-dados";
@@ -153,7 +157,7 @@ export function MapaRio({ eventos, selecionadoId, onSelecionar, voarPara, rota, 
         );
         if (!vivo) return;
 
-        const primeiroTexto = m.getStyle().layers.find((l) => l.type === "symbol")?.id;
+        const primeiroTexto = m.getStyle().layers.find((l: { type: string }) => l.type === "symbol")?.id;
 
         // Prédios em 3D (camada `building` do OpenMapTiles).
         m.addLayer(
@@ -223,7 +227,7 @@ export function MapaRio({ eventos, selecionadoId, onSelecionar, voarPara, rota, 
         m.setLayoutProperty("predios-3d", "visibility", camadas3d);
         m.setLayoutProperty("colunas-3d", "visibility", camadas3d);
 
-        m.on("click", "grupos", async (e) => {
+        m.on("click", "grupos", async (e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) => {
           const f = e.features?.[0];
           const id = f?.properties?.cluster_id;
           if (f && typeof id === "number" && f.geometry.type === "Point") {
@@ -232,11 +236,11 @@ export function MapaRio({ eventos, selecionadoId, onSelecionar, voarPara, rota, 
             m.easeTo({ center: f.geometry.coordinates as [number, number], zoom: zoom + 0.3 });
           }
         });
-        m.on("click", "pontos", (e) => {
+        m.on("click", "pontos", (e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) => {
           const id = e.features?.[0]?.properties?.id;
           if (typeof id === "string") aoSelecionar.current(id);
         });
-        m.on("click", (e) => {
+        m.on("click", (e: MapMouseEvent) => {
           if (escolhendo.current) return;
           const tocou = m.queryRenderedFeatures(e.point, { layers: ["pontos", "grupos"] });
           if (tocou.length === 0) aoSelecionar.current(null);

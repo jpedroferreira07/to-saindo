@@ -33,9 +33,9 @@ export function BuscaLocal({ rotulo, placeholder, rotuloOculto = false, onEscolh
   const pedido = useRef(0);
 
   // Lugar vindo de fora: mostra o nome e marca como escolhido.
-  const ultimoExterno = useRef<Lugar | null>(null);
-  if (valorExterno && valorExterno !== ultimoExterno.current) {
-    ultimoExterno.current = valorExterno;
+  const [ultimoExterno, setUltimoExterno] = useState<Lugar | null>(null);
+  if (valorExterno && valorExterno !== ultimoExterno) {
+    setUltimoExterno(valorExterno);
     setTexto(valorExterno.nome);
     setEscolhido(true);
     setAberto(false);

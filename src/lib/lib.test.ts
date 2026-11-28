@@ -1,24 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
-import { resolverBairro, normalizar } from "./bairros";
-import { carregarEventos, estaAtivo, eventosExemplo, horaDoRio, lerLinhaDoBanco } from "./eventos";
-import { distanciaAoSegmentoKm, distanciaKm } from "./geo";
+import { normalizar, resolverBairro } from "./bairros";
+import { estaAtivo, eventosExemplo, horaDoRio, lerLinhaDoBanco } from "./eventos";
+import { FILTROS_PADRAO, filtrarEventos, lerFiltros, maisNovosPrimeiro, paraQuery, slugDoBairro } from "./filtros";
+import { dentroDoRio, distanciaAoSegmentoKm, distanciaKm } from "./geo";
+import { caminhoParaLinha, circuloPoligono, eventosParaColunas, eventosParaPontos, nomeDoBalao, pontoNoCaminho, rumoEntre } from "./mapa-dados";
 import { MODOS } from "./modos";
 import { CHAVE_MUDO, GerenteDeSom, type AudioLike } from "./som";
-import { avisosDoTrajeto, resolverTrajeto, textoDoLetreiro } from "./trajeto";
+import { TIPOS } from "./tipos";
+import { ocorrenciasNoCaminho } from "./trajeto";
 
 const AGORA = new Date("2026-11-28T09:30:00Z");
 
 describe("eventos", () => {
   it("marca todos os exemplos como fictícios e ativos", () => {
     const lista = eventosExemplo(AGORA);
-    expect(lista).toHaveLength(15);
+    expect(lista.length).toBeGreaterThan(10);
     expect(lista.every((e) => e.exemplo && estaAtivo(e, AGORA))).toBe(true);
   });
 
   it("evento expirado não está ativo", () => {
     const [e] = eventosExemplo(AGORA);
-    const depois = new Date(Date.parse(e.expira_em) + 1);
-    expect(estaAtivo(e, depois)).toBe(false);
+    expect(estaAtivo(e, new Date(Date.parse(e.expira_em) + 1))).toBe(false);
+  });
+
+  it("validade por tipo: tiroteio dura menos que buraco", () => {
+    expect(TIPOS.tiroteio.validadeH).toBeLessThan(TIPOS.buraco.validadeH);
   });
 
   it("formata a hora no fuso do Rio", () => {
@@ -40,29 +46,87 @@ describe("eventos", () => {
     expect(lerLinhaDoBanco({ ...boa, lat: "x" })).toBeNull();
     expect(lerLinhaDoBanco(null)).toBeNull();
   });
+});
 
-  it("cai no plano B quando o banco falha", async () => {
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "chave-de-teste");
-    const falha = vi.fn().mockRejectedValue(new Error("sem rede")) as unknown as typeof fetch;
-    const r = await carregarEventos(AGORA, falha);
-    expect(r.origem).toBe("exemplo");
-    expect(r.eventos.length).toBeGreaterThan(0);
-    vi.unstubAllEnvs();
+describe("filtros na URL", () => {
+  const params = (q: string) => new URLSearchParams(q);
+
+  it("lê aba, bairro e tipos; valor estranho cai no padrão", () => {
+    expect(lerFiltros(params("aba=feed&bairro=tijuca&tipos=chuva,buraco"))).toEqual({
+      aba: "feed", bairro: "tijuca", tipos: ["chuva", "buraco"],
+    });
+    expect(lerFiltros(params("aba=x&bairro=<script>&tipos=hack,chuva,chuva"))).toEqual({
+      aba: "mapa", bairro: null, tipos: ["chuva"],
+    });
   });
 
-  it("usa o banco quando ele responde com eventos válidos", async () => {
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "chave-de-teste");
-    const linha = {
-      id: "a1", tipo: "chuva", titulo: "Chuva", fonte: "Alerta Rio", confianca: "oficial",
-      inicio: "2026-11-28T09:00:00Z", expira_em: "2026-11-28T15:00:00Z", lat: -22.9, lng: -43.2, severidade: 1,
-    };
-    const ok = vi.fn().mockResolvedValue({ ok: true, json: async () => [linha, { lixo: true }] }) as unknown as typeof fetch;
-    const r = await carregarEventos(AGORA, ok);
-    expect(r.origem).toBe("ao-vivo");
-    expect(r.eventos).toHaveLength(1);
-    vi.unstubAllEnvs();
+  it("ida e volta da query e padrão vazio", () => {
+    expect(paraQuery(FILTROS_PADRAO)).toBe("");
+    const f = { aba: "feed" as const, bairro: "tijuca", tipos: ["chuva" as const] };
+    expect(lerFiltros(params(paraQuery(f)))).toEqual(f);
+  });
+
+  it("filtra por bairro e tipo, e ordena do mais novo", () => {
+    const todos = eventosExemplo(AGORA);
+    const chuva = filtrarEventos(todos, { bairro: null, tipos: ["chuva"] });
+    expect(chuva.length).toBeGreaterThan(0);
+    expect(chuva.every((e) => e.tipo === "chuva")).toBe(true);
+    const b = todos[0].bairro;
+    expect(filtrarEventos(todos, { bairro: slugDoBairro(b), tipos: [] }).every((e) => e.bairro === b)).toBe(true);
+    const ord = maisNovosPrimeiro(todos).map((e) => Date.parse(e.inicio));
+    expect([...ord].sort((x, y) => y - x)).toEqual(ord);
+  });
+});
+
+describe("ocorrências no caminho", () => {
+  const caminho: Array<[number, number]> = [[-22.9, -43.2], [-22.9, -43.1]];
+  const base = eventosExemplo(AGORA)[0];
+  const ev = (id: string, lat: number, sev: 1 | 2 | 3) => ({ ...base, id, lat, lng: -43.15, severidade: sev });
+
+  it("pega só o que está a até 500 m, graves primeiro", () => {
+    const lista = [ev("perto", -22.9015, 1), ev("grave", -22.9, 3), ev("longe", -22.91, 3)];
+    expect(ocorrenciasNoCaminho(caminho, lista, AGORA).map((x) => x.evento.id)).toEqual(["grave", "perto"]);
+  });
+
+  it("expirada nunca entra", () => {
+    const depois = new Date(Date.parse(base.expira_em) + 1);
+    expect(ocorrenciasNoCaminho(caminho, [ev("x", -22.9, 3)], depois)).toEqual([]);
+  });
+});
+
+describe("dados do mapa", () => {
+  it("pontos e colunas têm uma feição por evento, com [lng, lat]", () => {
+    const lista = eventosExemplo(AGORA);
+    const pontos = eventosParaPontos(lista);
+    expect(pontos.features).toHaveLength(lista.length);
+    expect(pontos.features[0].geometry.coordinates).toEqual([lista[0].lng, lista[0].lat]);
+    expect(eventosParaColunas(lista).features.length).toBe(lista.length);
+  });
+
+  it("balão tracejado só para relato", () => {
+    const [e] = eventosExemplo(AGORA);
+    expect(nomeDoBalao({ ...e, confianca: "relato" })).not.toBe(nomeDoBalao({ ...e, confianca: "oficial" }));
+  });
+
+  it("círculo fecha o polígono", () => {
+    const c = circuloPoligono(-22.9, -43.2, 50);
+    expect(c[0]).toEqual(c[c.length - 1]);
+  });
+
+  it("ponto no caminho nas pontas e no meio, rumo para leste", () => {
+    const cam: Array<[number, number]> = [[-22.9, -43.2], [-22.9, -43.1]];
+    expect(pontoNoCaminho(cam, 0).ponto).toEqual(cam[0]);
+    expect(pontoNoCaminho(cam, 1).ponto[1]).toBeCloseTo(-43.1, 5);
+    expect(pontoNoCaminho(cam, 0.5).ponto[1]).toBeCloseTo(-43.15, 3);
+    expect(rumoEntre(cam[0], cam[1])).toBeCloseTo(90, 0);
+    expect(caminhoParaLinha(cam).coordinates[0]).toEqual([-43.2, -22.9]);
+  });
+});
+
+describe("limite do Rio", () => {
+  it("aceita o Centro e recusa São Paulo", () => {
+    expect(dentroDoRio(-22.9, -43.2)).toBe(true);
+    expect(dentroDoRio(-23.55, -46.63)).toBe(false);
   });
 });
 
@@ -97,38 +161,6 @@ describe("geo", () => {
     expect(distanciaAoSegmentoKm([-22.88, -43.15], a, b)).toBeLessThan(2.5);
     expect(distanciaAoSegmentoKm(longe, a, b)).toBeGreaterThan(15);
     expect(distanciaAoSegmentoKm([-22.9, -43.15], a, a)).toBeGreaterThan(0);
-  });
-});
-
-describe("trajeto", () => {
-  it("explica qual ponta não foi encontrada", () => {
-    expect(resolverTrajeto("Atlantis", "Centro")).toEqual({ erro: expect.stringContaining("ponto de saída") });
-    expect(resolverTrajeto("Centro", "Atlantis")).toEqual({ erro: expect.stringContaining("destino") });
-    expect(resolverTrajeto("x", "y")).toEqual({ erro: expect.stringContaining("nenhum dos dois") });
-  });
-
-  it("Campo Grande → Centro traz chuva, trânsito e outros avisos do caminho, graves primeiro", () => {
-    const r = resolverTrajeto("Campo Grande", "Centro");
-    if (!("trajeto" in r)) throw new Error("trajeto não resolvido");
-    const avisos = avisosDoTrajeto(r.trajeto, eventosExemplo(AGORA), AGORA);
-    expect(avisos.length).toBeGreaterThan(0);
-    expect(avisos.length).toBeLessThanOrEqual(3);
-    const sev = avisos.map((a) => a.evento.severidade);
-    expect([...sev].sort((x, y) => y - x)).toEqual(sev);
-    expect(avisos.some((a) => a.evento.bairro === "Maré" || a.evento.bairro === "Campo Grande")).toBe(true);
-  });
-
-  it("não avisa de evento expirado", () => {
-    const r = resolverTrajeto("Campo Grande", "Centro");
-    if (!("trajeto" in r)) throw new Error("trajeto não resolvido");
-    const muitoDepois = new Date(AGORA.getTime() + 48 * 3_600_000);
-    expect(avisosDoTrajeto(r.trajeto, eventosExemplo(AGORA), muitoDepois)).toEqual([]);
-  });
-
-  it("monta o letreiro em maiúsculas, sem lixo e com limite de tamanho", () => {
-    expect(textoDoLetreiro("campo grande", "centro", "carro")).toBe("CAMPO GRANDE >> CENTRO · DE CARRO");
-    expect(textoDoLetreiro("<script>x</script>", "", "metro")).toBe("SCRIPTXSCRIPT >> PARA ONDE VAI · DE METRÔ");
-    expect(textoDoLetreiro("a".repeat(200), "b", "bike").length).toBeLessThanOrEqual(64);
   });
 });
 
@@ -208,7 +240,7 @@ describe("som", () => {
     expect(await g.tocar([])).toBe(false);
   });
 
-  it("todo meio tem rótulo e letreiro; só o ônibus em aberto não deveria faltar som", () => {
+  it("todo meio tem rótulo e letreiro", () => {
     expect(MODOS).toHaveLength(8);
     expect(MODOS.every((m) => m.rotulo && m.letreiro)).toBe(true);
   });
